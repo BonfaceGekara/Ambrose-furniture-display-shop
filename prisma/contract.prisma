@@ -1,0 +1,137 @@
+// use prisma-8
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id        String             @id @onCreate(cuid(2))
+  name      String?
+  email     String             @unique
+  emailVerified   DateTime?
+  image     String?
+  passwordHash    String?
+  role      Role       @default(CUSTOMER)
+  cart      Cart?
+  orders    Order[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime            @onCreate(now()) @onUpdate(now())
+}
+
+model Category {
+  id       String                @id @onCreate(cuid(2))
+  name     String
+  slug     String          @unique
+  description    String?
+  products        Product[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime            @onCreate(now())  @onUpdate(now())
+}
+
+model Product {
+  id         String           @id   @onCreate(cuid(2))
+  name       String
+  slug       String           @unique
+  description String
+  price      Int8Number
+  stock      Int              @default(0)
+  isActive   Boolean          @default(true)
+
+  categoryId String
+  category   Category         @relation(fields: [categoryId], references: [id])
+
+  images     ProductImage[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @onCreate(now())  @onUpdate(now())
+}
+
+model ProductImage {
+  id    String    @id @onCreate(cuid(2))
+  imageUrl  String
+  altText   String?
+  sortOrder Int       @default(0)
+
+  productId String
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime    @default(now())
+}
+
+model Cart {
+  id       String       @id       @onCreate(cuid(2))
+
+  userId   String       @unique
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cartItems   CartItem[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @onCreate(now())  @onUpdate(now())
+}
+
+model CartItem {
+  id         String       @id     @onCreate(cuid(2))
+  quantity    Int         @default(1)
+
+  cartId     String
+  cart        Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId   String
+  product     Product     @relation(fields: [productId], references: [id])
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @onCreate(now()) @onUpdate(now())
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id         String        @id       @onCreate(cuid(2))
+  status     OrderStatus   @default(PENDING)
+
+  subtotal   Decimal
+  total      Decimal
+  currency   String    @default('KES')
+
+  shippingName    String
+  shippingPhone   String
+  shippingAddress String
+  shippingCity    String
+
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+
+  items           OrderItem[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @onCreate(now()) @onUpdate(now())
+}
+
+model OrderItem {
+  id            String   @id @onCreate(cuid(2))
+
+  nameSnapshot  String
+  unitPrice     Decimal
+  quantity      Int
+
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+}
